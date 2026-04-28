@@ -6,5 +6,16 @@ requires = [
          ]
 build-backend = 'setuptools.build_meta'
 
+[project]
+name = "8051-simulator"
+version = "0.0.0"
+description = "8051 microprocessor simulator"
+readme = "README.rst"
+requires-python = ">=3.7"
+dependencies = [
+    "Flask>=2.0.2",
+    "rich>=11.2.0",
+]
+
 [tool.black]
 line-length=120
