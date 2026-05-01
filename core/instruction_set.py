@@ -97,7 +97,7 @@ class Instructions:
             if data[0] == "@":  # Register indirect
                 data = self.op.memory_read(str(self.op.memory_read(data[1:])))
             elif data[0] == "#":  # Immediate addressing
-                data = data[1:]
+                data = tohex(data[1:])
             else:
                 data = self.op.memory_read(data)
         return addr, data
@@ -127,30 +127,31 @@ class Instructions:
         return self.op.memory_write(addr, result_hex)
 
     def subb(self, addr, data) -> bool:
-        addr, data_2 = self._resolve_addressing_mode(addr, data)
+        addr, data_2_val = self._resolve_addressing_mode(addr, data)
         data_1 = self.op.memory_read(addr)
+        
+        data_2_int = int(str(data_2_val), 16)
         if self.flags.CY:
             self.flags.CY = False
-            data_2 += 1
-        result_hex = self._check_flags_and_compute(data_1, data_2, add=False)
+            data_2_int += 1
+            
+        result_hex = self._check_flags_and_compute(data_1, format(data_2_int, "#04x"), add=False)
         return self.op.memory_write(addr, result_hex)
 
     def anl(self, addr_1, addr_2) -> bool:
-        addr_1, _ = self._resolve_addressing_mode(addr_1)
-        addr_2, _ = self._resolve_addressing_mode(addr_2)
+        addr_1, data_2 = self._resolve_addressing_mode(addr_1, addr_2)
 
-        data_1 = int(self.op.memory_read(addr_1))
-        data_2 = int(self.op.memory_read(addr_2))
+        data_1 = int(str(self.op.memory_read(addr_1)), 16)
+        data_2 = int(str(data_2), 16)
         result = format(data_1 & data_2, "#04x")
         self.op.memory_write(addr_1, result)
         return self._check_flags(format(int(result, self._base), "08b"))
 
     def orl(self, addr_1, addr_2) -> bool:
-        addr_1, _ = self._resolve_addressing_mode(addr_1)
-        addr_2, _ = self._resolve_addressing_mode(addr_2)
+        addr_1, data_2 = self._resolve_addressing_mode(addr_1, addr_2)
 
-        data_1 = int(self.op.memory_read(addr_1))
-        data_2 = int(self.op.memory_read(addr_2))
+        data_1 = int(str(self.op.memory_read(addr_1)), 16)
+        data_2 = int(str(data_2), 16)
         result = format(data_1 | data_2, "#04x")
         self.op.memory_write(addr_1, result)
         return self._check_flags(format(int(result, self._base), "08b"))
@@ -218,10 +219,16 @@ class Instructions:
 
     def clr(self, bit: str) -> bool:
         """Clears a bit"""
+        if bit.upper() == "A":
+            return self.op.memory_write("A", "0x00")
         return self.op.bit_write(bit, False)
 
     def cpl(self, bit: str) -> bool:
         """Complements a bit"""
+        if bit.upper() == "A":
+            _data = self.op.memory_read("A")
+            _data = format(~int(str(_data), 16) & 0xFF, "#04x")
+            return self.op.memory_write("A", _data)
         _data = self.op.bit_read(bit)
         return self.op.bit_write(bit, not _data)
 
@@ -287,9 +294,8 @@ class Instructions:
     def cjne(self, addr, addr2, label, *args, **kwargs) -> bool:
         """Compare and jump if not equal"""
         bounce_to_label = kwargs.get("bounce_to_label")
+        addr, data_2 = self._resolve_addressing_mode(addr, addr2)
         data_1 = self.op.memory_read(addr)
-        addr2, _ = self._resolve_addressing_mode(addr2)
-        data_2 = self.op.memory_read(addr2)
         
         val_1 = int(str(data_1), 16)
         val_2 = int(str(data_2), 16)
@@ -365,32 +371,28 @@ class Instructions:
         data_1 = reg1.read()
         data_2 = reg2.read()
 
-        # Perform 8-bit × 8-bit multiplication
+        # Perform 8-bit division
         try:
             quotient = int(data_1) // int(data_2)
-
+            remainder = int(data_1) % int(data_2)
+            self.flags.OV = False
         except ZeroDivisionError:
             quotient = 0
-
-        try:
-            remainder = int(data_1) % int(data_2)
-        except ZeroDivisionError:
             remainder = 0
-        print(quotient)
-        print(remainder)
+            # In 8051, division by zero sets the Overflow flag
+            self.flags.OV = True
 
         quotient = tohex(str(hex(quotient)))
         remainder = tohex(str(hex(remainder)))
 
         # Write results back to A and B
-
         self.op.memory_write("0xE0", quotient)
         self.op.memory_write("0xF0", remainder)
 
-        # CY is always cleared for MUL
+        # CY is always cleared for DIV
         self.flags.CY = False
 
-        print(f"MUL {addr_1}, {addr_2} => {data_1} × {data_2} = A={quotient}, B={remainder})")
+        print(f"DIV {addr_1}, {addr_2} => {data_1} / {data_2} = A={quotient}, B={remainder}")
         return True
 
     pass

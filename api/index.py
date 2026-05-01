@@ -1,4 +1,5 @@
 import json
+import os
 
 from flask import Flask, make_response, render_template, request
 
@@ -57,6 +58,7 @@ def assemble():
         _flags = commands_dict.get("flags", None)
         if _commands and _flags:
             try:
+                controller.reset()
                 controller.set_flags(_flags)
                 controller.parse_all(_commands)
                 ram, rom = _get_ram_and_rom()
@@ -162,3 +164,84 @@ def main():
         general_purpose_registers=controller.op.super_memory._general_purpose_registers,
         flags=controller.op.super_memory.PSW.flags(),
     )
+
+
+@app.route("/api/ai-help", methods=["POST"])
+def ai_help():
+    """AI Learning Assistant endpoint for explaining 8051 code using Groq (Free API)"""
+    try:
+        from groq import Groq
+        
+        # Get Groq API key from request or environment
+        request_data = json.loads(request.data)
+        api_key = request_data.get('api_key') or os.environ.get('GROQ_API_KEY')
+        
+        if not api_key:
+            return make_response(
+                json.dumps({
+                    "error": "Groq API key not provided. Set GROQ_API_KEY environment variable or provide it in the request.",
+                    "info": "Get a free key at https://console.groq.com"
+                }),
+                400
+            )
+        
+        user_message = request_data.get('message', '')
+        code = request_data.get('code', '')
+        mode = request_data.get('mode', 'chat')
+        
+        if not user_message:
+            return make_response(json.dumps({"error": "No message provided"}), 400)
+        
+        # Build system prompt based on mode
+        if mode == 'explain':
+            system_prompt = """You are an expert 8051 microcontroller assembly language tutor. 
+Your role is to help students learn 8051 assembly programming by explaining code clearly and thoroughly.
+- Explain each instruction and what it does
+- Break down the code into logical sections
+- Explain register usage and memory operations
+- Be concise but thorough
+- Use simple language suitable for beginners"""
+        elif mode == 'tutor':
+            system_prompt = """You are an interactive 8051 learning tutor.
+Help students understand how code executes step-by-step:
+- Trace through execution with specific memory and register values
+- Explain state changes at each step
+- Point out important concepts
+- Use examples to illustrate concepts
+- Encourage active learning"""
+        else:  # chat
+            system_prompt = """You are a helpful 8051 microcontroller tutor.
+Help students learn assembly programming by answering their questions.
+- Provide clear, concise explanations
+- Give practical examples
+- Point to relevant resources and concepts
+- Encourage curiosity and learning
+- Help debug code if asked"""
+        
+        # Call Groq API
+        client = Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        ai_message = response.choices[0].message.content
+        
+        return json.dumps({"message": ai_message})
+        
+    except ImportError:
+        return make_response(
+            json.dumps({"error": "Groq library not installed. Run: pip install groq"}),
+            400
+        )
+    except Exception as e:
+        print(f"AI Error: {str(e)}")
+        return make_response(
+            json.dumps({"error": f"AI Error: {str(e)}"}),
+            500
+        )

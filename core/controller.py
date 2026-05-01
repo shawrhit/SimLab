@@ -62,9 +62,12 @@ class Controller:
         return _func
 
     def _bounce_to_label(self, label):
-        idx, _ = self._locate_jump_label(label)
+        idx, x = self._locate_jump_label(label)
         print(f"JUMPING to label: {label} index: {idx}")
         self._run_idx = idx
+        if x and x[3].get("label"):
+            # Synchronize the Program Counter back to the target label's ROM address
+            self.op.super_memory.PC(str(x[3].get("label")._counter))
         return True
 
     def _sync_PC(self) -> bool:
