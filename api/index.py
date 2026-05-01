@@ -156,6 +156,7 @@ def main():
     global controller
     controller = Controller()
     ram, rom = _get_ram_and_rom()
+    supported_opcodes = sorted(list(controller.lookup.keys()))
     return render_template(
         "index.html",
         ram=ram,
@@ -163,6 +164,7 @@ def main():
         registers=controller.op.super_memory._registers_todict(),
         general_purpose_registers=controller.op.super_memory._general_purpose_registers,
         flags=controller.op.super_memory.PSW.flags(),
+        supported_opcodes=supported_opcodes
     )
 
 

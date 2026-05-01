@@ -72,7 +72,16 @@
     <div class="memory-edit-container" style="grid-area: f;">
         <input class="memory-edit bg-dark text-white border-secondary" placeholder="edit addr(eg.0800H=12H)"
             id="memory_edit_input" autocomplete="new-password">
+    </div>
+
+    <div class="supported-opcodes-container table-container" style="grid-area: g; padding: 10px;">
+        <div style="font-size: 0.9rem; font-weight: 600; color: rgba(255, 255, 255, 0.9); margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">Supported Opcodes</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; overflow-y: auto; max-height: 150px;">
+            {% for op in supported_opcodes %}
+            <span style="font-size: 11px; background: rgba(255,255,255,0.08); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">{{ op }}</span>
+            {% endfor %}
         </div>
+    </div>
 
 </div>
 {% endblock %}

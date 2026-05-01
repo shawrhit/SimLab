@@ -237,7 +237,8 @@ body {
     grid-template-areas:
         "a d f"
         "a d c"
-        "a e c";
+        "a e c"
+        "a e g";
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
@@ -453,7 +454,8 @@ table caption {
             "a d"
             "a e"
             "f f"
-            "c c";
+            "c c"
+            "g g";
     }
 
     .memory-edit-container {
@@ -510,7 +512,8 @@ table caption {
             "e"
             "a"
             "f"
-            "c";
+            "c"
+            "g";
         gap: 0.75rem;
         padding: 0.75rem;
         overflow: visible;

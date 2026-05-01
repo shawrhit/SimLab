@@ -202,6 +202,36 @@ class Instructions:
         data_new = format(int(rolled_data_bin, 2), "#02x")
         return self.op.memory_write("A", data_new)
 
+    def rrc(self, addr) -> bool:
+        """Rotate right through carry"""
+        addr, _ = self._resolve_addressing_mode(addr)
+        data = self.op.memory_read(addr)
+        data_int = int(str(data), 16)
+        cy = 1 if self.flags.CY else 0
+        new_cy = data_int & 0x01
+        rotated = (data_int >> 1) | (cy << 7)
+        self.flags.CY = bool(new_cy)
+        return self.op.memory_write("A", format(rotated, "#04x"))
+
+    def rlc(self, addr) -> bool:
+        """Rotate left through carry"""
+        addr, _ = self._resolve_addressing_mode(addr)
+        data = self.op.memory_read(addr)
+        data_int = int(str(data), 16)
+        cy = 1 if self.flags.CY else 0
+        new_cy = (data_int & 0x80) >> 7
+        rotated = ((data_int << 1) & 0xFF) | cy
+        self.flags.CY = bool(new_cy)
+        return self.op.memory_write("A", format(rotated, "#04x"))
+
+    def swap(self, addr) -> bool:
+        """Swap nibbles of accumulator"""
+        addr, _ = self._resolve_addressing_mode(addr)
+        data = self.op.memory_read(addr)
+        data_int = int(str(data), 16)
+        swapped = ((data_int & 0x0F) << 4) | ((data_int & 0xF0) >> 4)
+        return self.op.memory_write("A", format(swapped, "#04x"))
+
     def da(self, addr: str) -> bool:
         """Converts the hex data into its BCD equivalent."""
         addr, _ = self._resolve_addressing_mode(addr)
