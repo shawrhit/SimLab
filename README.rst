@@ -6,7 +6,7 @@
 
 A project for python based 8051 microprocessor simulator
 
-Deployed at `8051 Simulator <https://sim8051.pythonanywhere.com/>`_
+Deployed at `8051 Simulator <https://sim.shaws.systems/>`_
 
 .. image:: _static/interface.png
     :alt: Webapp interface
