@@ -6,6 +6,11 @@ from flask import Flask, make_response, render_template, request
 from core.controller import Controller
 from core.util import fill_memory
 
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+
 # from core.flags import flags
 
 CLEAR_TOKEN = "batman"
@@ -172,9 +177,13 @@ def main():
 @app.route("/api/ai-help", methods=["POST"])
 def ai_help():
     """AI Learning Assistant endpoint for explaining 8051 code using Groq (Free API)"""
+    if Groq is None:
+        return make_response(
+            json.dumps({"error": "Groq library not installed. Please ensure 'groq' is in requirements.txt"}),
+            400
+        )
+
     try:
-        from groq import Groq
-        
         # Get Groq API key from request or environment
         request_data = json.loads(request.data)
         api_key = request_data.get('api_key') or os.environ.get('GROQ_API_KEY')
@@ -237,11 +246,6 @@ Help students learn assembly programming by answering their questions.
         
         return json.dumps({"message": ai_message})
         
-    except ImportError:
-        return make_response(
-            json.dumps({"error": "Groq library not installed. Run: pip install groq"}),
-            400
-        )
     except Exception as e:
         print(f"AI Error: {str(e)}")
         return make_response(
