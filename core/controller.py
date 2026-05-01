@@ -71,8 +71,9 @@ class Controller:
         for asm_instruct in self.op._internal_PC[self._run_idx - 1]:
             if not asm_instruct:
                 return True
-            self.op.super_memory.PC.write(*asm_instruct)
-            self.console.log(f"Write PC: {asm_instruct}")
+            for byte in asm_instruct:
+                self.op.super_memory.PC.write(byte)
+                self.console.log(f"Write PC: {byte}")
         return True
 
     def _call(self, func, *args, **kwargs) -> bool:

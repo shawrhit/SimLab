@@ -145,7 +145,10 @@ class Operations:
         self._internal_PC.append([[_opcode_hex], *_args_hex])
         _assembler = [_opcode_hex]
         for x in _args_hex:
-            for y in x[::-1]:
+            data_bytes = x
+            if not (opcode.upper() == "MOV" and args and args[0].upper() == "DPTR"):
+                data_bytes = x[::-1]
+            for y in data_bytes:
                 _assembler.append(y)
         self._assembler[command] = " ".join(_assembler).lower()
         return True

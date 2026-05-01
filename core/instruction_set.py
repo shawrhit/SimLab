@@ -106,6 +106,20 @@ class Instructions:
         addr, data = self._resolve_addressing_mode(addr, data)
         return self.op.memory_write(addr, data)
 
+    def movx(self, addr, data) -> bool:
+        """Move between A and simulator ROM/external memory via DPTR/R0/R1."""
+        addr = addr.upper()
+        data = data.upper()
+        if addr == "@DPTR" and data == "A":
+            return self.op.memory_write(str(self.op.memory_read("DPTR")), self.op.memory_read("A"), RAM=False)
+        if addr == "A" and data == "@DPTR":
+            return self.op.memory_write("A", self.op.memory_read(str(self.op.memory_read("DPTR")), RAM=False))
+        if addr in ("@R0", "@R1") and data == "A":
+            return self.op.memory_write(str(self.op.memory_read(addr[1:])), self.op.memory_read("A"), RAM=False)
+        if addr == "A" and data in ("@R0", "@R1"):
+            return self.op.memory_write("A", self.op.memory_read(str(self.op.memory_read(data[1:])), RAM=False))
+        return False
+
     def add(self, addr, data) -> bool:
         addr, data_1 = self._resolve_addressing_mode(addr, data)
         data_2 = self.op.memory_read(addr)
@@ -142,6 +156,9 @@ class Instructions:
         return self._check_flags(format(int(result, self._base), "08b"))
 
     def inc(self, addr) -> bool:
+        if addr.upper() == "DPTR":
+            next(self.op.super_memory.DPTR)
+            return True
         addr, _ = self._resolve_addressing_mode(addr)
         data = self.op.memory_read(addr)
         return self.op.memory_write(addr, data + 1)

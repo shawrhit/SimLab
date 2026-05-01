@@ -4,7 +4,7 @@ import textwrap
 # from core.flags import flags
 from core.basic_memory import Byte
 from core.exceptions import InvalidMemoryAddress, MemoryLimitExceeded
-from core.util import decompose_byte, get_byte_sequence
+from core.util import decompose_byte, get_byte_sequence, tohex
 
 """
 8051 has
@@ -207,6 +207,8 @@ class DataPointer:
         self._DPH = LinkedRegister(memory_ram, addr[1])
         self._bytes = 2
         self._base = 16
+        self._memory_limit = 65536
+        self._format_spec = "#06x"
         return
 
     def __repr__(self) -> str:
@@ -219,41 +221,42 @@ class DataPointer:
         """
         val: `int`
         """
-        data_int = int(self._data, self._base) + val
-        if data_int > self._memory_limit:
+        data_int = int(str(self.read()), self._base) + val
+        if data_int >= self._memory_limit:
             data_int -= self._memory_limit
         elif data_int < 0:
             data_int += self._memory_limit
-        self._data = format(data_int, self._format_spec)
-        return self._data
+        data = format(data_int, self._format_spec)
+        self.write(data)
+        return data
 
     def __sub__(self, val: int, *args, **kwargs) -> str:
         """
         val: `int`
         """
-        data_int = int(self._data, self._base) - val
-        if data_int > self._memory_limit:
+        data_int = int(str(self.read()), self._base) - val
+        if data_int >= self._memory_limit:
             data_int -= self._memory_limit
         elif data_int < 0:
             data_int += self._memory_limit
-        self._data = format(data_int, self._format_spec)
-        return self._data
+        data = format(data_int, self._format_spec)
+        self.write(data)
+        return data
 
     def __next__(self):
         return self.__add__(1)
 
     def read(self, *args, **kwargs) -> Byte:
-        bin1 = format(int(str(self._DPL.read()), self._base), f"0{8*self._bytes}b")  # single byte
-        bin2 = format(int(str(self._DPH.read()), self._base), f"0{8*self._bytes}b")  # single byte
-        bin_total = "".join(["0b", bin2, bin1])
-        return format(int(bin_total, 2), f"#0{self._bytes*2 + 2}x")
+        high = int(str(self._DPH.read()), self._base)
+        low = int(str(self._DPL.read()), self._base)
+        return format((high << 8) | low, self._format_spec)
 
     def write(self, data, *args) -> Byte:
-        data = decompose_byte(data)
+        data = decompose_byte(tohex(str(data)))
         if len(data) != 2:
             raise InvalidMemoryAddress
-        self._DPL.write(data[0])
-        self._DPH.write(data[1])
+        self._DPH.write(data[0])
+        self._DPL.write(data[1])
         return True
 
 
