@@ -29,6 +29,7 @@ class Controller:
         }
         # callstack
         self._callstack = []
+        self._pending_label = None
         self.ready = False
         self._jump_methods = self.op._jump_instructions
         self._wrap_bounceable_methods()
@@ -122,6 +123,9 @@ class Controller:
     def callstack(self) -> list:
         return self._callstack
 
+    def _current_code_addr(self):
+        return self.op.super_memory.PC + sum(len(bytes_) for bytes_ in self.op._internal_PC)
+
     def _addjob(self, opcode: str, func, args: tuple = (), kwargs: dict = {}) -> bool:
         for idx, val in enumerate(args):
             if not self.op.iskeyword(val):
@@ -131,16 +135,16 @@ class Controller:
         return True
 
     def _parser(self, command, *args, **kwargs) -> tuple:
-        command = command.strip()
+        command = command.split(";", 1)[0].strip()
         if not command:
-            return None, None
+            return None, None, kwargs
         if command[0] == "#":  # Directive
             command = command[1:]
 
-        match = re.match("^[a-zA-Z]+:", command)
+        match = re.match("^[a-zA-Z_][a-zA-Z0-9_]*:", command)
         if match:
             label = match.group()[:-1]
-            kwargs["label"] = JumpFlag(label, self.op.super_memory.PC, command)
+            kwargs["label"] = JumpFlag(label, self._current_code_addr(), command)
             return self._parser(command.replace(f"{label}:", ""), *args, **kwargs)
 
         _proc_command = re.split(r",| ", command)
@@ -153,11 +157,18 @@ class Controller:
     def parse(self, command):
         self.console.log(command)
         opcode, args, kwargs = self._parser(command)
+        if opcode is None:
+            if kwargs.get("label"):
+                self._pending_label = kwargs["label"]
+            return True
+        if self._pending_label and not kwargs.get("label"):
+            kwargs["label"] = self._pending_label
+            self._pending_label = None
         self.console.log(f"opcode: {opcode}; args: {args}; kwargs: {kwargs}")
         if self.instruct_set._is_jump_opcode(opcode):
             print("JUMP instruction")
             # if JNZ | JC | etc ** kwargs the target-label **
-            kwargs["target-label"] = JumpFlag(args[0], self.op.super_memory.PC + len(self.op._internal_PC), command)
+            kwargs["target-label"] = JumpFlag(args[-1], self._current_code_addr(), command)
             args.append("offset")  # placeholder
             # kwargs["label"] = _label
             # args.append("offset")  # placeholder
@@ -224,6 +235,7 @@ class Controller:
 
     def reset_callstack(self) -> None:
         self._callstack = []
+        self._pending_label = None
         self._run_idx = 0
         self.op._assembler = {}
         return True

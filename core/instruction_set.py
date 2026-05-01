@@ -26,8 +26,8 @@ class Instructions:
         `aux_data` are the LSB of the two data to be added
         For example: for `0x11` and `0xae`, `aux_data=["0x1", "0xe"]`
         """
-        decomposed_data_1 = decompose_byte(data_1, nibble=True)
-        decomposed_data_2 = decompose_byte(data_2, nibble=True)
+        decomposed_data_1 = decompose_byte(str(data_1), nibble=True)
+        decomposed_data_2 = decompose_byte(str(data_2), nibble=True)
         carry_data, aux_data = list(zip(decomposed_data_1, decomposed_data_2))
 
         if _AC:
@@ -37,6 +37,9 @@ class Instructions:
                 self.flags.AC = True
 
         if not _CY:
+            return
+        
+        if og2 is None:
             return
 
         if not add:
@@ -88,11 +91,11 @@ class Instructions:
 
     def _resolve_addressing_mode(self, addr, data=None) -> tuple:
         if addr[0] == "@":  # Register indirect
-            addr = self.op.memory_read(addr[1:])
+            addr = str(self.op.memory_read(addr[1:]))
 
         if data:
             if data[0] == "@":  # Register indirect
-                data = self.op.memory_read(data[1:])
+                data = self.op.memory_read(str(self.op.memory_read(data[1:])))
             elif data[0] == "#":  # Immediate addressing
                 data = data[1:]
             else:
@@ -254,9 +257,12 @@ class Instructions:
             label = addr
             addr = "A"
         data = self.op.memory_read(addr)
-
+        
         result = int(str(data), 16) - 1
+        if result < 0:
+            result = result & 0xFF  # Wrap around for 8-bit
         self.op.memory_write(addr, hex(result))
+        
         if int(self.op.memory_read(addr)) != 0:
             return bounce_to_label(label)
         return True
@@ -267,8 +273,12 @@ class Instructions:
         data_1 = self.op.memory_read(addr)
         addr2, _ = self._resolve_addressing_mode(addr2)
         data_2 = self.op.memory_read(addr2)
-        if int(data_1) != int(data_2):
-            if int(data_1) < int(data_2):
+        
+        val_1 = int(str(data_1), 16)
+        val_2 = int(str(data_2), 16)
+        
+        if val_1 != val_2:
+            if val_1 < val_2:
                 self.flags.CY = True
             # Jump if not equal
             return bounce_to_label(label)
