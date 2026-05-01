@@ -1,15 +1,12 @@
 import json
 import os
+import urllib.request
+import urllib.error
 
 from flask import Flask, make_response, render_template, request
 
 from core.controller import Controller
 from core.util import fill_memory
-
-try:
-    from groq import Groq
-except ImportError:
-    Groq = None
 
 # from core.flags import flags
 
@@ -177,12 +174,6 @@ def main():
 @app.route("/api/ai-help", methods=["POST"])
 def ai_help():
     """AI Learning Assistant endpoint for explaining 8051 code using Groq (Free API)"""
-    if Groq is None:
-        return make_response(
-            json.dumps({"error": "Groq library not installed. Please ensure 'groq' is in requirements.txt"}),
-            400
-        )
-
     try:
         # Get Groq API key from request or environment
         request_data = json.loads(request.data)
@@ -230,22 +221,33 @@ Help students learn assembly programming by answering their questions.
 - Encourage curiosity and learning
 - Help debug code if asked"""
         
-        # Call Groq API
-        client = Groq(api_key=api_key)
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
+        # Call Groq API via standard HTTP request (no external library needed!)
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            max_tokens=1000,
-            temperature=0.7
-        )
+            "max_tokens": 1000,
+            "temperature": 0.7
+        }
         
-        ai_message = response.choices[0].message.content
+        req = urllib.request.Request(url, headers=headers, data=json.dumps(data).encode('utf-8'))
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            ai_message = result['choices'][0]['message']['content']
         
         return json.dumps({"message": ai_message})
         
+    except urllib.error.HTTPError as e:
+        error_msg = e.read().decode('utf-8')
+        print(f"Groq API Error: {error_msg}")
+        return make_response(json.dumps({"error": "AI API Error. Please check your API key."}), 400)
     except Exception as e:
         print(f"AI Error: {str(e)}")
         return make_response(
