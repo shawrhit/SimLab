@@ -345,8 +345,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (request.status === 200) {
                 const response = JSON.parse(request.responseText);
                 const aiMsgDiv = document.createElement('div');
-                aiMsgDiv.style.cssText = 'padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; color: rgba(255,255,255,0.9); font-size: 12px; word-wrap: break-word; line-height: 1.4; white-space: pre-wrap;';
-                aiMsgDiv.textContent = response.message;
+                aiMsgDiv.className = 'ai-message-content';
+                aiMsgDiv.style.cssText = 'padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; color: rgba(255,255,255,0.9); font-size: 12px; word-wrap: break-word; line-height: 1.4;';
+                
+                if (typeof marked !== 'undefined') {
+                    aiMsgDiv.innerHTML = marked.parse(response.message);
+                } else {
+                    aiMsgDiv.style.whiteSpace = 'pre-wrap';
+                    aiMsgDiv.textContent = response.message;
+                }
                 aiChatMessages.appendChild(aiMsgDiv);
             } else {
                 try {

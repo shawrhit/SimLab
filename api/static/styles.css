@@ -633,6 +633,39 @@ table caption {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* AI Markdown Content Styling */
+.ai-message-content p {
+    margin-bottom: 0.5em;
+}
+.ai-message-content p:last-child {
+    margin-bottom: 0;
+}
+.ai-message-content code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
+    color: #ff9e64;
+}
+.ai-message-content pre {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ai-message-content pre code {
+    background: transparent;
+    padding: 0;
+    color: #e5e5e5;
+}
+.ai-message-content ul, .ai-message-content ol {
+    padding-left: 20px;
+    margin-bottom: 0.5em;
+}
+
 #ai-input {
     transition: border-color 150ms, background-color 150ms;
 }

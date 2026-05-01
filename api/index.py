@@ -225,10 +225,11 @@ Help students learn assembly programming by answering their questions.
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "8051-Simulator/1.0"
         }
         data = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "llama-3.1-8b-instant",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
@@ -247,7 +248,14 @@ Help students learn assembly programming by answering their questions.
     except urllib.error.HTTPError as e:
         error_msg = e.read().decode('utf-8')
         print(f"Groq API Error: {error_msg}")
-        return make_response(json.dumps({"error": "AI API Error. Please check your API key."}), 400)
+        detailed_error = "Please check your API key."
+        try:
+            error_data = json.loads(error_msg)
+            if "error" in error_data and "message" in error_data["error"]:
+                detailed_error = error_data["error"]["message"]
+        except Exception:
+            pass
+        return make_response(json.dumps({"error": f"Groq: {detailed_error}"}), 400)
     except Exception as e:
         print(f"AI Error: {str(e)}")
         return make_response(
