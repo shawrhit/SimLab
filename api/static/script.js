@@ -279,19 +279,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load saved API key from localStorage
     const savedKey = localStorage.getItem('groq_api_key');
-    if (savedKey) {
+    if (savedKey && aiApiKey) {
         aiApiKey.value = savedKey;
     }
 
     // Save API key when changed
-    aiApiKey.addEventListener('change', () => {
-        localStorage.setItem('groq_api_key', aiApiKey.value);
-    });
+    if (aiApiKey) {
+        aiApiKey.addEventListener('change', () => {
+            localStorage.setItem('groq_api_key', aiApiKey.value);
+        });
+    }
 
     // Help link
-    aiKeyHelp.addEventListener('click', () => {
-        window.open('https://console.groq.com', '_blank');
-    });
+    if (aiKeyHelp) {
+        aiKeyHelp.addEventListener('click', () => {
+            window.open('https://console.groq.com', '_blank');
+        });
+    }
 
     // Toggle AI panel
     aiPanelToggle.addEventListener('click', (event) => {
@@ -311,15 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function sendMessage(userMessage, mode = 'chat') {
         if (!userMessage.trim()) return;
 
-        const apiKey = aiApiKey.value.trim();
-        if (!apiKey) {
-            const errorDiv = document.createElement('div');
-            errorDiv.style.cssText = 'padding: 8px; background: rgba(255,200,0,0.1); border-radius: 6px; color: #ffb300; font-size: 12px;';
-                errorDiv.innerHTML = '<strong>API Key needed:</strong> Get free key at <a href="https://console.groq.com" target="_blank" style="color: #0A84FF;">console.groq.com</a>';
-            aiChatMessages.appendChild(errorDiv);
-            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
-            return;
-        }
+        const apiKey = aiApiKey ? aiApiKey.value.trim() : '';
 
         // Add user message to chat
         const userMsgDiv = document.createElement('div');

@@ -12,12 +12,14 @@
         <button id="ai-panel-close" style="background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 18px;">✕</button>
     </div>
     
+    {% if not has_server_key %}
     <!-- API Key Input -->
     <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
         <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">Groq API Key (free)</div>
         <input id="ai-api-key" type="password" placeholder="Or set GROQ_API_KEY env" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: white; font-size: 11px; box-sizing: border-box;" />
         <div style="font-size: 9px; color: #0A84FF; margin-top: 4px; cursor: pointer;" id="ai-key-help">Get free key →</div>
     </div>
+    {% endif %}
     
     <!-- AI Tool Buttons -->
     <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 6px;">

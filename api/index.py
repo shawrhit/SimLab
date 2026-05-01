@@ -164,7 +164,8 @@ def main():
         registers=controller.op.super_memory._registers_todict(),
         general_purpose_registers=controller.op.super_memory._general_purpose_registers,
         flags=controller.op.super_memory.PSW.flags(),
-        supported_opcodes=supported_opcodes
+        supported_opcodes=supported_opcodes,
+        has_server_key=bool(os.environ.get("GROQ_API_KEY"))
     )
 
 
