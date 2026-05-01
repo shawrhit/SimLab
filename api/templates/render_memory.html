@@ -1,6 +1,27 @@
 <div class="table-container" style="overflow-x: auto;">
+    {% if memory_rows %}
     <table class="table table-striped table-hover table-dark" style="font-size: 10px;">
-        <caption>RAM</caption>
+        <caption>RAM{% if ram_range %} ({{ ram_range }}){% endif %}</caption>
+        <tbody>
+            <td></td>
+            {% for x in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"] %}
+                <th scope="col">{{ x }}</th>
+            {% endfor %}
+            {% for mem_row in memory_rows %}
+                    <tr>
+                        <th scope="row">
+                            {{ mem_row[0][0][:-1] }}
+                        </th>
+                    {% for key, value in mem_row %}
+                        <td class="memory-cell" data-addr="{{ key }}" data-bank="ram">{{ (value|string)[2:] }}</td>
+                    {% endfor %}
+                    </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <table class="table table-striped table-hover table-dark" style="font-size: 10px;">
+        <caption>RAM{% if ram_range %} ({{ ram_range }}){% endif %}</caption>
         <tbody>
             <td></td>
             {% for x in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"] %}
@@ -12,14 +33,14 @@
                             {{ ramval[0][0][:-1] }}
                         </th>
                     {% for key, value in ramval %}
-                        <td>{{ (value|string)[2:] }}</td>
+                        <td class="memory-cell" data-addr="{{ key }}" data-bank="ram">{{ (value|string)[2:] }}</td>
                     {% endfor %}
                     </tr>
             {% endfor %}
         </tbody>
     </table>
     <table class="table table-striped table-hover table-dark" style="font-size: 10px;">
-        <caption>ROM</caption>
+        <caption>ROM{% if rom_range %} ({{ rom_range }}){% endif %}</caption>
         <tbody>
             <td></td>
             {% for x in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"] %}
@@ -31,10 +52,11 @@
                         {{ romval[0][0][:-1] }}
                     </th>
                 {% for key, value in romval %}
-                    <td>{{ (value|string)[2:] }}</td>
+                    <td class="memory-cell" data-addr="{{ key }}" data-bank="rom">{{ (value|string)[2:] }}</td>
                 {% endfor %}
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
 </div>

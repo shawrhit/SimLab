@@ -1,8 +1,21 @@
 window.onload = function () {
     console.log("load");
+    const deviceName = document.body?.dataset?.deviceName || "8051";
+    const deviceSelect = document.getElementById("device-select");
     // reload code contents
-    document.getElementById("code").value = localStorage.getItem("code") || "";
+    const codeStorageKey = `code_${deviceName.toLowerCase()}`;
+    document.getElementById("code").value = localStorage.getItem(codeStorageKey) || "";
     RenderLineNumbers();
+
+    if (deviceSelect) {
+        deviceSelect.value = deviceName;
+        deviceSelect.addEventListener("change", () => {
+            const selected = deviceSelect.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set("device", selected);
+            window.location.assign(url.toString());
+        });
+    }
 
     document.getElementById("run").disabled = true;
     document.getElementById("step").disabled = true;
@@ -19,6 +32,7 @@ window.onload = function () {
         console.log("assemble")
         const request = new XMLHttpRequest();
         request.open("POST", `/assemble`);
+        request.setRequestHeader("Content-Type", "application/json");
         request.onload = () => {
             const response = request.responseText;
             if (request.status != 200) {
@@ -34,12 +48,13 @@ window.onload = function () {
         var _code = document.getElementById("code").value.trim();
         if (_code) {
             // save code
-            localStorage.setItem("code", _code)
+            localStorage.setItem(codeStorageKey, _code)
             console.log("sent")
             request.send(JSON.stringify(
                 {
                     "code": _code,
-                    "flags": GetFlags()
+                    "flags": GetFlags(),
+                    "device": deviceName
                 }
             ));
         }
@@ -49,6 +64,7 @@ window.onload = function () {
         console.log("run");
         const request = new XMLHttpRequest();
         request.open("POST", `/run`);
+        request.setRequestHeader("Content-Type", "application/json");
         request.onload = () => {
             const response = request.responseText;
             if (request.status != 200) {
@@ -63,13 +79,17 @@ window.onload = function () {
             }
         };
         var _code = document.getElementById("code").value.trim();
-        request.send(_code);
+        request.send(JSON.stringify({
+            "code": _code,
+            "device": deviceName
+        }));
     });
 
     document.getElementById("step").addEventListener("click", function () {
         console.log("step");
         const request = new XMLHttpRequest();
         request.open("POST", `/run-once`);
+        request.setRequestHeader("Content-Type", "application/json");
         request.onload = () => {
             const response = request.responseText;
             if (request.status != 200) {
@@ -87,13 +107,16 @@ window.onload = function () {
             }
         };
         var _code = document.getElementById("code").value.trim();
-        request.send(_code);
+        request.send(JSON.stringify({
+            "code": _code,
+            "device": deviceName
+        }));
     });
 
     document.getElementById("reset").addEventListener("click", function () {
         console.log("reset")
         const request = new XMLHttpRequest();
-        request.open("POST", `/reset`);
+        request.open("POST", `/reset?device=${encodeURIComponent(deviceName)}`);
         request.onload = () => {
             const response = request.responseText;
             if (request.status != 200) {
@@ -123,6 +146,7 @@ window.onload = function () {
             }
             const request = new XMLHttpRequest();
             request.open("POST", `/memory-edit`);
+            request.setRequestHeader("Content-Type", "application/json");
             request.onload = () => {
                 const response = request.responseText;
                 if (request.status != 200) {
@@ -136,9 +160,13 @@ window.onload = function () {
                     document.getElementById("assembler-container").innerHTML = _resp_dict["assembler"];
                 }
             }
-            request.send(JSON.stringify(_mem_edit));
+            request.send(JSON.stringify({
+                "device": deviceName,
+                "mem_edit": _mem_edit
+            }));
         }
     });
+    InitMemoryCellEditor(deviceName);
     ShowPhoneWarning();
     var footer = document.querySelector("header");
     if (footer) {
@@ -257,8 +285,109 @@ function ProcessMemEdit(data) {
     return [data]
 }
 
+function NormalizeHexInput(value) {
+    var cleaned = (value || "").trim();
+    if (!cleaned) return "";
+    if (/^0x[0-9a-f]+$/i.test(cleaned)) return cleaned;
+    if (/^[0-9a-f]+h$/i.test(cleaned)) return cleaned;
+    if (/^[0-9a-f]+$/i.test(cleaned)) return cleaned + "H";
+    return cleaned;
+}
+
+function InitMemoryCellEditor(deviceName) {
+    var memoryContainer = document.getElementById("memory-container");
+    var backdrop = document.getElementById("mem-dialog-backdrop");
+    var dialog = document.getElementById("mem-dialog");
+    var addrEl = document.getElementById("mem-address");
+    var valueInput = document.getElementById("mem-value");
+    var writeBtn = document.getElementById("mem-write-btn");
+    var closeBtn = document.getElementById("mem-dialog-close");
+    var cancelBtn = document.getElementById("mem-dialog-cancel");
+    if (!memoryContainer || !backdrop || !dialog || !addrEl || !valueInput || !writeBtn) return;
+
+    var activeAddr = null;
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(dialog);
+
+    function openDialog(addr, value) {
+        activeAddr = addr;
+        addrEl.textContent = addr;
+        valueInput.value = (value || "").trim();
+        backdrop.classList.add("open");
+        dialog.classList.add("open");
+        valueInput.focus();
+        valueInput.select();
+    }
+
+    function closeDialog() {
+        activeAddr = null;
+        valueInput.value = "";
+        backdrop.classList.remove("open");
+        dialog.classList.remove("open");
+    }
+
+    function writeMemory() {
+        if (!activeAddr) return;
+        var normalizedValue = NormalizeHexInput(valueInput.value);
+        if (!normalizedValue) {
+            alert("Enter a hex value like 05H or 0x05");
+            return;
+        }
+        var memEdit = ProcessMemEdit(`${activeAddr}=${normalizedValue}`);
+        if (!memEdit) {
+            alert("Invalid memory edit");
+            return;
+        }
+        const request = new XMLHttpRequest();
+        request.open("POST", `/memory-edit`);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.onload = () => {
+            const response = request.responseText;
+            if (request.status != 200) {
+                alert(response)
+            }
+            else {
+                const _resp_dict = JSON.parse(response)
+                document.getElementById("registers-flags").innerHTML = _resp_dict["registers_flags"];
+                document.getElementById("memory-container").innerHTML = _resp_dict["memory"];
+                document.getElementById("assembler-container").innerHTML = _resp_dict["assembler"];
+                closeDialog();
+            }
+        };
+        request.send(JSON.stringify({
+            "device": deviceName,
+            "mem_edit": memEdit
+        }));
+    }
+
+    memoryContainer.addEventListener("click", (event) => {
+        var cell = event.target.closest(".memory-cell");
+        if (!cell) return;
+        var addr = cell.getAttribute("data-addr");
+        var value = cell.textContent;
+        if (!addr) return;
+        openDialog(addr, value);
+    });
+
+    backdrop.addEventListener("click", closeDialog);
+    if (closeBtn) closeBtn.addEventListener("click", closeDialog);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeDialog);
+    if (writeBtn) writeBtn.addEventListener("click", writeMemory);
+    valueInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            writeMemory();
+        }
+        if (event.key === "Escape") {
+            closeDialog();
+        }
+    });
+}
+
 // ============ AI PANEL FUNCTIONALITY ============
 document.addEventListener('DOMContentLoaded', function() {
+    const deviceName = document.body?.dataset?.deviceName || document.body?.dataset?.device || '8051';
     const aiPanel = document.getElementById('ai-panel');
     const aiPanelToggle = document.getElementById('ai-panel-toggle');
     const aiPanelClose = document.getElementById('ai-panel-close');
@@ -384,7 +513,8 @@ document.addEventListener('DOMContentLoaded', function() {
             message: userMessage,
             code: codeContext,
             mode: mode,
-            api_key: apiKey
+            api_key: apiKey,
+            device_name: deviceName
         }));
     }
 
@@ -396,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         aiPanel.classList.add('open');
-        sendMessage('Please explain this 8051 assembly code line by line:\n\n' + code, 'explain');
+        sendMessage(`Please explain this ${deviceName} assembly code line by line:\n\n${code}`, 'explain');
     });
 
     // Step-by-step tutor button
@@ -407,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         aiPanel.classList.add('open');
-        sendMessage('Please provide a step-by-step explanation of how this 8051 code executes:\n\n' + code, 'tutor');
+        sendMessage(`Please provide a step-by-step explanation of how this ${deviceName} code executes:\n\n${code}`, 'tutor');
     });
 
     // Send button
