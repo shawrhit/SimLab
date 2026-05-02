@@ -45,12 +45,27 @@ def _get_controller(device: str):
     return controllers[device]
 
 
-def _set_memory_value(device: str, controller, memloc: str, memdata: str) -> bool:
+def _set_memory_value(device: str, controller, memloc: str, memdata: str, bank: str = None) -> bool:
     if device == "8085":
         controller.op.memory_write(memloc, memdata)
         return True
 
     addr_int = int(str(memloc), 16)
+
+    if bank == "rom":
+        if addr_int <= int(controller.op.memory_rom._memory_limit_hex, 16):
+            addr = format(addr_int, controller.op.memory_rom._format_spec)
+            controller.op.memory_rom.write(addr, memdata)
+            return True
+        raise ValueError("Memory address out of range")
+
+    if bank == "ram":
+        if addr_int <= int(controller.op.memory_ram._memory_limit_hex, 16):
+            addr = format(addr_int, controller.op.memory_ram._format_spec)
+            controller.op.memory_ram.write(addr, memdata)
+            return True
+        raise ValueError("Memory address out of range")
+
     if addr_int <= int(controller.op.memory_ram._memory_limit_hex, 16):
         addr = format(addr_int, controller.op.memory_ram._format_spec)
         controller.op.memory_ram.write(addr, memdata)
@@ -64,8 +79,8 @@ def _set_memory_value(device: str, controller, memloc: str, memdata: str) -> boo
 
 def _apply_memory_overrides(device: str, controller) -> None:
     overrides = memory_overrides.get(device, {})
-    for addr, value in overrides.items():
-        _set_memory_value(device, controller, addr, value)
+    for addr, (value, bank) in overrides.items():
+        _set_memory_value(device, controller, addr, value, bank)
 
 
 def _get_8051_ram_and_rom(controller):
@@ -249,13 +264,14 @@ def update_memory():
         device = _get_device_from_request(payload)
         controller = _get_controller(device)
         mem_items = payload.get("mem_edit") or payload
+        bank = payload.get("bank")
         print(mem_items)
         try:
             for memloc, memdata in mem_items:
                 print("=============================")
                 print(memloc, memdata)
-                _set_memory_value(device, controller, memloc, memdata)
-                memory_overrides.setdefault(device, {})[memloc] = memdata
+                _set_memory_value(device, controller, memloc, memdata, bank)
+                memory_overrides.setdefault(device, {})[memloc] = (memdata, bank)
             controller._run_idx = 0
             state = _render_state(device, controller)
             state["index"] = controller._run_idx

@@ -306,12 +306,14 @@ function InitMemoryCellEditor(deviceName) {
     if (!memoryContainer || !backdrop || !dialog || !addrEl || !valueInput || !writeBtn) return;
 
     var activeAddr = null;
+    var activeBank = null;
 
     document.body.appendChild(backdrop);
     document.body.appendChild(dialog);
 
-    function openDialog(addr, value) {
+    function openDialog(addr, value, bank) {
         activeAddr = addr;
+        activeBank = bank || null;
         addrEl.textContent = addr;
         valueInput.value = (value || "").trim();
         backdrop.classList.add("open");
@@ -322,6 +324,7 @@ function InitMemoryCellEditor(deviceName) {
 
     function closeDialog() {
         activeAddr = null;
+        activeBank = null;
         valueInput.value = "";
         backdrop.classList.remove("open");
         dialog.classList.remove("open");
@@ -357,7 +360,8 @@ function InitMemoryCellEditor(deviceName) {
         };
         request.send(JSON.stringify({
             "device": deviceName,
-            "mem_edit": memEdit
+            "mem_edit": memEdit,
+            "bank": activeBank
         }));
     }
 
@@ -365,9 +369,10 @@ function InitMemoryCellEditor(deviceName) {
         var cell = event.target.closest(".memory-cell");
         if (!cell) return;
         var addr = cell.getAttribute("data-addr");
+        var bank = cell.getAttribute("data-bank");
         var value = cell.textContent;
         if (!addr) return;
-        openDialog(addr, value);
+        openDialog(addr, value, bank);
     });
 
     backdrop.addEventListener("click", closeDialog);
