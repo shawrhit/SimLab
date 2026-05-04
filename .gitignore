@@ -133,3 +133,6 @@ dmypy.json
 
 .codex
 .env
+
+# Node.js
+node_modules/
